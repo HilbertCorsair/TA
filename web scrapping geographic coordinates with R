@@ -1,0 +1,50 @@
+# 1) Accéder aux données
+
+# Pour accéder aux données j’ai d’abord créé une une base de données SQL avec MAMP o...
+#   ... u j’ai importé le fichier content les entreprises et leurs adresses.
+# En suite j'ai ouver un nouveu script en R 
+
+library(DBI)    # Les fonctions DBI permetent de se connecter à une basse de données , dans ce cas SQL
+
+con <- dbConnect(RMySQL::MySQL(), # ici j'ai créé un objet de connection "con"a ma base de données SQL en MAMP 
+                 dbname = "CAEs", 
+                 host = "127.0.0.1", 
+                 port = 8889, 
+                 user = "root", 
+                 password = "root", 
+                 soket = "/Applications/MAMP/tmp/mysql/mysql.sock")
+
+dat <- dbReadTable(con, "cae_coop", stringsasfactors = F) # j'utilise l'objet de connection "con" pour importer les données en "dat"
+                                                          # NOTE : à eviter cette procedure pour de grosses basses des données, dans ce cas R permets aussi de faire de requets SQL et analiser les données sans les importer lolcalement 
+dbDisconnect(con)     # c'est une bonne habitude de toujours se deconnecter aprés avoir fini avec la basse de données 
+
+# 2) Extraire les adresses et villes 
+
+library(dplyr)                 # dplyr petmets de manipuler facilement les données mais je ne l'ai pas utilisé ici pour l'instant 
+names(dat)                     # donne les noms des colones 
+dat$name <- tolower(dat$name)  # modifie les elements dans la colone "names" pour les ecrire en minuscules 
+adrs <- paste(dat$address, dat$city, sep = " ")       # extrere l'adresse et la ville de chaque entreprise dans une seule colone "adrs"
+
+#3) Visualiser les données
+
+library(ggplot2) # pour la visualisation 
+library(ggmap)   # pour la cartographie 
+
+fr <- get_map(location = "France", zoom = 6)  # importation de la carte de la France avec zoom 6 
+geo_coords <- geocode(adrs)                   # extraire les coordonées géographiques des adresses en "adrs", dans la variable geo_coords
+ 
+
+names_n_coords <- data.frame(dat$name, geo_coords, col) # creer une "data frame" avec les nom des entreprises et leurs coordonées géographiques 
+names(names_n_coords)= c("name", "lon", "lat")          # renomer les colones de "names_n_coords" avec "name", "lon", "lat"
+ggmap(fr , extent = "device")+                          # aficher la carte de la France + 
+  geom_point(data = names_n_coords, col = "red")        # ajouter les points dans names_n_coords en rouge
+
+
+# 4) Données manquantes 
+
+sum(is.na(geo_coords$lon))                 # affiche le nombre des données manquantes       
+manque <- which(is.na(geo_coords$lon))     # affiche les indexes des données manquantes  
+missing_vals <- adrs[manque]               # affiche les adresses avec les coordonnées manquantes (enviton 12 /150 ) 
+            
+          # pour ortenir les 12 coordonées manquantes il soufi de completter ou corriger l'adresse en ajoutant aussi le cod postal et / ou le nome de la boite
+
