@@ -46,5 +46,6 @@ sum(is.na(geo_coords$lon))                 # affiche le nombre des données manq
 manque <- which(is.na(geo_coords$lon))     # affiche les indexes des données manquantes  
 missing_vals <- adrs[manque]               # affiche les adresses avec les coordonnées manquantes (enviton 12 /150 ) 
             
-          # pour ortenir les 12 coordonées manquantes il soufi de completter ou corriger l'adresse en ajoutant aussi le cod postal et / ou le nome de la boite
+          # pour ortenir les 12 coordonées manquantes il soufi de completter ou corriger l'adresse en ajoutant aussi le cod postal et / ou le nome de la boite ....
+          # puis relanser la comande geocode() avec les nouveles adresses  
 
