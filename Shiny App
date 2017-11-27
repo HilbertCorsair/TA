@@ -1,0 +1,28 @@
+library(shiny)
+ui <-  fluidPage(selectInput(inputId ="dpt", label = "choix departement", 
+                             choices = unique(data1$nom_dpt), selected = "Hérault", multiple = FALSE,
+                             selectize = TRUE, width = '50%', size = NULL),
+                 plotOutput("Chomage"),
+                 plotOutput("Bussiness") )
+
+server <- function(input, output){
+  output$Chomage <- renderPlot({
+    data1 <- read.csv("motherfile.csv", header  = T, stringsAsFactors = F, 
+                      col.names = c("no_dpt",
+                                    "date", "no_entps", 
+                                    "no_entp_sans_sals", "nom_dpt", 
+                                    "ages", "ensemble", "longue_duree", "jeunes_chomeurs") )
+    
+    
+    data1$date <- as.Date(data1$date, format = "%Y-%m-%d")
+   
+    ggplot(data1 %>% filter(nom_dpt == input$dpt), aes( x =  date, y= ensemble) )+
+      geom_point(col = "red", alpha = 0.5)+
+      geom_smooth(method = "lm", se = F, color = "red")
+    
+  })
+  output$Bussiness <- renderPlot({ggplot(data1 %>% filter(nom_dpt == input$dpt & date != "2011-10-01")
+                                         , aes( x =  date, y= no_entps) )+
+      geom_point(col = "chartreuse4", alpha = 0.5)+ geom_smooth(method = "lm", se = F, color = "chartreuse4")})
+}
+shinyApp(ui = ui, server = server)
