@@ -1,0 +1,29 @@
+library(readr)
+library(tidyr)
+library(dplyr)
+library(readxl)
+library(lubridate) # pas utilisé 
+library(xts)       # pas utilisé
+library(purrr)
+library(ggplot2)
+library(broom)
+
+data1 <- read.csv("motherfile.csv", header  = T, stringsAsFactors = F, 
+                  col.names = c("no_dpt",
+                                 "date", "no_entps", 
+                                 "no_entp_sans_sals", "nom_dpt", 
+                                 "ages", "ensemble", "longue_duree", "jeunes_chomers") )
+
+data1$date <- as.Date(data1$date, format = "%Y-%m-%d")
+
+# modéles lineaires chomage : evolution  
+
+lm_list <- data1%>% 
+  select(date,  nom_dpt, ensemble) %>%                               #sellecting relevant columns 
+  nest(-nom_dpt) %>%                                                 #nesting data for each department 
+  mutate(model_raw = map(data, ~lm(ensemble ~ date, data = .))) %>%  #creating linear model table of corficients for each department 
+  mutate(model_tbl = map(model_raw , tidy)) %>%                      #transforming the linear model table into a tible that can be used in dplyr manipulations
+  unnest(model_tbl)%>%                                               #unnesting to make data available 
+  filter(term == "date")%>%                                          #sellecting the slope (beta)
+  mutate(p_adjusted = p.adjust(p.value))%>%                          #adjusting the p value and filtering for statisclal signifficance (p>.05)
+  filter(p_adjusted < .05)
