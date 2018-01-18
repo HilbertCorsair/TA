@@ -1,28 +1,73 @@
-library(shiny)
-ui <-  fluidPage(selectInput(inputId ="dpt", label = "choix departement", 
-                             choices = unique(data1$nom_dpt), selected = "Hérault", multiple = FALSE,
-                             selectize = TRUE, width = '50%', size = NULL),
-                 plotOutput("Chomage"),
-                 plotOutput("Bussiness") )
 
-server <- function(input, output){
-  output$Chomage <- renderPlot({
-    data1 <- read.csv("motherfile.csv", header  = T, stringsAsFactors = F, 
-                      col.names = c("no_dpt",
-                                    "date", "no_entps", 
-                                    "no_entp_sans_sals", "nom_dpt", 
-                                    "ages", "ensemble", "longue_duree", "jeunes_chomeurs") )
+###Importation des librarys 
+library(shiny)
+library(shinythemes)
+
+    ####tidyverse 
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(ggmap)
+    #### si jamais on fait des analyses de series temporels 
+library(lubridate)
+library(xts)
+
+
+## On commence par l'importation des données 
+## On importe le fichier "motherfile.csv" , avec header , les "strings" ne sont pas facteurs (la fonction read.csv() importe par defaut les "stings" comme facteurs ce qui peut poser des problemes des fois)   
+## j'ai specifié les noms des colones pour l'importation dans col.names () 
+
+data2 <- read.csv("motherfile.csv", header  = T, stringsAsFactors = F, 
+                  col.names = c("num_dpt",
+                                "date", "nbr_entps", 
+                                "nbr_entps_sans_sal", "nom_dpt", 
+                                "plus_50_ans", "chom_actv", "longue_duree", "moins_25_ans",
+                                "nbr_cae", "name" , "mail"              
+                                , "phone" ,  "address" ,"city", "postal_code"       
+                                , "region",  "website"  , "description" , "lon" , "lat") )
+
+data2$date <- as.Date(data2$date, format = "%Y-%m-%d") 
+
+###################### L'application commence ici ###########################################
+
+####### Partie 1 User Interface #####################
+## Dans cette partie on definie les objets interactives ainsi que leur ouutput dans une varible "ui" à l'aide de la fonction "fluidPage()"
+
+ui <-  fluidPage( theme = shinytheme("superhero"),  # la theme est optionelle 
+                  selectInput(inputId ="dpt",       # c'est le premier et pour l'instant le seul objet interactif : la barre de selection du departement avec le id = "dpt" 
+                              label = "choix departement",  
+                             choices = unique(data2$nom_dpt), selected = "Hérault", multiple = FALSE, # les choix possibles sont les valeurs uniques de la collone nom_dpt de la base de données 
+                             selectize = TRUE, width = '50%', size = NULL), # fin de "selectInput" 
+            
+                 plotOutput("Chomage"),   # on veut que selectInput sort un "plot" de "Chomage"
+                 plotOutput("Bussiness") ) # on veut que selectInput sort un "plot" de "Buissness"
+                 
+####### Partie 2 Serveur  #####################
+## Dans cette partie on definie une fonction reactive qui va executer des requettes au serveur en fonction des actions de l'utilistaeur
+
+server <- function(input, output){  # initialisation de la fonction "server" avec deux arguments :  input et output 
+                                     output$Chomage <- renderPlot({    # output 1 : le "plot" Chomage
+                                     ggplot(data2 %>% filter(nom_dpt == input$dpt), aes( x =  date, y= chom_actv) )+ # plot du chomage en fonction de la date 
+                            # on filtre la base de données en gardant seulement les observations corespondant au departement sélecté
+                            # data2 passe comme premier argument de la fonction filter() de pac. dplyr et la collone nom_dpt == valeur du selectInput (nom de departement choisi) 
+                                       geom_point(col = "red", alpha = 0.1)+ # points rouge transparents 
+                                       geom_smooth(method = "lm", se = F, color = "red") # droite de regression linéaire, sans l'inrerval de confience à 95% (se = F), rouge
     
-    
-    data1$date <- as.Date(data1$date, format = "%Y-%m-%d")
-   
-    ggplot(data1 %>% filter(nom_dpt == input$dpt), aes( x =  date, y= ensemble) )+
-      geom_point(col = "red", alpha = 0.5)+
-      geom_smooth(method = "lm", se = F, color = "red")
-    
-  })
-  output$Bussiness <- renderPlot({ggplot(data1 %>% filter(nom_dpt == input$dpt & date != "2011-10-01")
-                                         , aes( x =  date, y= no_entps) )+
-      geom_point(col = "chartreuse4", alpha = 0.5)+ geom_smooth(method = "lm", se = F, color = "chartreuse4")})
-}
-shinyApp(ui = ui, server = server)
+                                                                  })
+  
+                                     output$Bussiness <- renderPlot({   # output 2 : le "plot" Bussiness  
+                                     ggplot(data2 %>% filter(nom_dpt == input$dpt & date != "2011-10-01") , aes( x =  date, y= nbr_entps) )+
+                                     # la même chose que pour le plot précédant mais en plus j'ai éliminé les observations pour la date "2011-10-01" car ils ont une probleme (valeurs beaucoup trop elvé : un ordre de grandeur de plus) 
+                                       geom_point(col = "chartreuse4", alpha = 0.1) + 
+                                       geom_smooth(method = "lm", se = F, color = "chartreuse4")
+  
+                                                                    })
+                                    }
+                                    
+                                    
+####### Partie 3 l'application  #####################
+shinyApp(ui = ui, server = server) 
+# une seule fonction shinyApp() avec deux arguments : l'objet "ui" et l'objet "server" 
+#Tous les objet interactives sont définis dans la fonction `fluidPage` de l’objet `ui`
+#Tous les objet de sortie (graphiques, tableaux, etc.) sont définis dans la fonction serveur. 
